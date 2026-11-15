@@ -1,0 +1,12 @@
+{
+  "sodaMachineWeight": 100,
+  "usesLeft": 1,
+  "normalTextureFileName": "ExtraStuff_EnergyDrinkMachine",
+  "outOfStockTextureFileName": "ExtraStuff_EnergyDrinkMachineOutOf",
+  "items": [
+    { "item": "itm_energy_drink", "weight": 100 }
+  ],
+  "acceptableItems": [ "Quarter" ],
+  "allowedLevels": [ "F1", "F2", "F3", "F4", "F5", "END" ],
+  "allowedLevelTypes": []
+}

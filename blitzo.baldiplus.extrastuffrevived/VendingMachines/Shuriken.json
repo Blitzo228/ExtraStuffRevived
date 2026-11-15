@@ -1,0 +1,12 @@
+{
+  "sodaMachineWeight": 100,
+  "usesLeft": 1,
+  "normalTextureFileName": "ExtraStuff_ShurikenMachine",
+  "outOfStockTextureFileName": "ExtraStuff_ShurikenMachineOutOf",
+  "items": [
+    { "item": "itm_safetyshuriken", "weight": 100 }
+  ],
+  "acceptableItems": [ "Quarter" ],
+  "allowedLevels": [ "F1", "F2", "F3", "F4", "F5", "END" ],
+  "allowedLevelTypes": []
+}

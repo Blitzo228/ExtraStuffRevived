@@ -1,0 +1,13 @@
+{
+  "sodaMachineWeight": 100,
+  "usesLeft": 1,
+  "normalTextureFileName": "ExtraStuff_BSODASMachine",
+  "outOfStockTextureFileName": "ExtraStuff_BSODASMachineOutOf",
+  "items": [
+    { "item": "Bsoda", "weight": 51 },
+    { "item": "DietBsoda", "weight": 50 }
+  ],
+  "acceptableItems": [ "Quarter" ],
+  "allowedLevels": [ "F1", "F2", "F3", "F4", "F5", "END" ],
+  "allowedLevelTypes": []
+}

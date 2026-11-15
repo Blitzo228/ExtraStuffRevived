@@ -1,0 +1,12 @@
+{
+  "sodaMachineWeight": 100,
+  "usesLeft": 1,
+  "normalTextureFileName": "ExtraStuff_PinkGumMachine",
+  "outOfStockTextureFileName": "ExtraStuff_PinkGumMachineOutOf",
+  "items": [
+    { "item": "itm_pinkgum", "weight": 100 }
+  ],
+  "acceptableItems": [ "Quarter" ],
+  "allowedLevels": [ "F1", "F2", "F3", "F4", "F5", "END" ],
+  "allowedLevelTypes": []
+}
