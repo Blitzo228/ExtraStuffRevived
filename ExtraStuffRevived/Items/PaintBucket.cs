@@ -50,8 +50,7 @@ namespace ExtraStuffRevived
             if (splashTried) return splashSound;
             splashTried = true;
 
-            string path = System.IO.Path.Combine(Application.streamingAssetsPath,
-                                       "Modded", ModInfo.ID, "Audio", "Splash.wav");
+            string path = BasePlugin.GetModFilePath("Audio", "Splash.wav");
             if (!System.IO.File.Exists(path)) return null;
 
             var clip = AssetLoader.AudioClipFromFile(path);
@@ -63,6 +62,7 @@ namespace ExtraStuffRevived
             so.soundClip = clip;
             so.soundType = SoundType.Effect;
             so.subtitle = false;
+            so.name = "ExtraStuff_SplashSound";
             splashSound = so;
             return splashSound;
         }
@@ -107,8 +107,7 @@ namespace ExtraStuffRevived
             var effectRenderer = effectObj.AddComponent<SpriteRenderer>();
             if (effectRenderer != null)
             {
-                if (BasePlugin.assetManager != null &&
-                    BasePlugin.assetManager.ContainsKey("Sprites/PaintBucket_Blind"))
+                if (BasePlugin.assetManager != null && BasePlugin.assetManager.ContainsKey("Sprites/PaintBucket_Blind"))
                 {
                     var sprite = BasePlugin.assetManager.Get<Sprite>("Sprites/PaintBucket_Blind");
                     if (sprite != null) effectRenderer.sprite = sprite;

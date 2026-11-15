@@ -23,13 +23,14 @@ namespace ExtraStuffRevived
 
             if (splashSound == null)
             {
-                string path = Path.Combine(Application.streamingAssetsPath, "Modded", ModInfo.ID, "Audio", "Splash.wav");
+                string path = BasePlugin.GetModFilePath("Audio", "Splash.wav");
                 if (File.Exists(path))
                 {
                     splashSound = ScriptableObject.CreateInstance<SoundObject>();
                     splashSound.soundClip = AssetLoader.AudioClipFromFile(path);
                     splashSound.soundType = SoundType.Effect;
                     splashSound.subtitle = false;
+                    splashSound.name = "ExtraStuff_WaterSplashSound";
                 }
             }
 
@@ -83,11 +84,14 @@ namespace ExtraStuffRevived
             puddleObj.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
 
             var renderer = puddleObj.AddComponent<SpriteRenderer>();
-            if (BasePlugin.assetManager.ContainsKey("Sprites/WaterSpray")) renderer.sprite = BasePlugin.assetManager.Get<Sprite>("Sprites/WaterSpray");
+            if (BasePlugin.assetManager.ContainsKey("Sprites/WaterSpray"))
+                renderer.sprite = BasePlugin.assetManager.Get<Sprite>("Sprites/WaterSpray");
 
             renderer.material = new Material(Shader.Find("Sprites/Default"));
             renderer.sortingLayerName = "NPCs";
             renderer.sortingOrder = 1;
+
+            puddleObj.AddComponent<WaterLighting>();
 
             var puddleComp = puddleObj.AddComponent<WaterPuddle>();
             puddleComp.Initialize(size, duration, sound);
@@ -149,33 +153,52 @@ namespace ExtraStuffRevived
             puddleObj.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
 
             var renderer = puddleObj.AddComponent<SpriteRenderer>();
-            if (BasePlugin.assetManager.ContainsKey("Sprites/WaterSpray")) renderer.sprite = BasePlugin.assetManager.Get<Sprite>("Sprites/WaterSpray");
+            if (BasePlugin.assetManager.ContainsKey("Sprites/WaterSpray"))
+                renderer.sprite = BasePlugin.assetManager.Get<Sprite>("Sprites/WaterSpray");
 
             renderer.material = new Material(Shader.Find("Sprites/Default"));
             renderer.sortingLayerName = "NPCs";
             renderer.sortingOrder = 1;
+
+            puddleObj.AddComponent<WaterLighting>();
 
             var puddleComp = puddleObj.AddComponent<WaterPuddle>();
             puddleComp.Initialize(4.5f, 15f, splashSound);
         }
     }
 
+    public class WaterLighting : MonoBehaviour
+    {
+        private SpriteRenderer? sr;
+        private EnvironmentController? ec;
+
+        private void Start()
+        {
+            sr = GetComponent<SpriteRenderer>();
+            if (BaseGameManager.Instance != null) ec = BaseGameManager.Instance.Ec;
+        }
+
+        private void Update()
+        {
+            if (sr != null && ec != null)
+            {
+                float light = ec.LightLevel(transform.position);
+                sr.color = new Color(light, light, light, 1f);
+            }
+        }
+    }
+
     public class WaterPuddle : MonoBehaviour
     {
-        private float duration;
         private float timer;
-
         private List<PlayerManager> affectedPlayers = new List<PlayerManager>();
         private List<NPC> affectedNpcs = new List<NPC>();
-
         private MovementModifier slowMod = new MovementModifier(Vector3.zero, 0.3f);
-
         private SphereCollider trigger = null!;
         private AudioSource? audioSource;
 
         public void Initialize(float size, float duration, SoundObject? sound)
         {
-            this.duration = duration;
             timer = duration;
 
             trigger = gameObject.AddComponent<SphereCollider>();
@@ -216,14 +239,8 @@ namespace ExtraStuffRevived
                 if (npc != null && !affectedNpcs.Contains(npc))
                 {
                     affectedNpcs.Add(npc);
-
-                    if (npc.Navigator != null)
-                    {
-                        npc.Navigator.Am.moveMods.Add(slowMod);
-                    }
-
-                    if (audioSource != null && audioSource.clip != null)
-                        audioSource.PlayOneShot(audioSource.clip);
+                    if (npc.Navigator != null) npc.Navigator.Am.moveMods.Add(slowMod);
+                    if (audioSource != null && audioSource.clip != null) audioSource.PlayOneShot(audioSource.clip);
                 }
             }
         }
@@ -245,8 +262,7 @@ namespace ExtraStuffRevived
                 if (npc != null && affectedNpcs.Contains(npc))
                 {
                     affectedNpcs.Remove(npc);
-                    if (npc.Navigator != null)
-                        npc.Navigator.Am.moveMods.Remove(slowMod);
+                    if (npc.Navigator != null) npc.Navigator.Am.moveMods.Remove(slowMod);
                 }
             }
         }
@@ -262,7 +278,6 @@ namespace ExtraStuffRevived
                 affectedPlayers.Clear();
                 affectedNpcs.Clear();
                 Destroy(gameObject);
-                return;
             }
         }
 

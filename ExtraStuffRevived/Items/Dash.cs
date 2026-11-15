@@ -47,6 +47,12 @@ namespace ExtraStuffRevived
         private float textTimer = 0f;
         private static SoundObject? tossSound;
 
+        private bool isCharging = false;
+        private float chargeTime = 0f;
+        private float startStamina = 0f;
+        private const float MaxChargeTime = 1.5f;
+        private const float DrainRate = 15f;
+
         public void Initialize(PlayerManager player, int count)
         {
             pm = player;
@@ -82,7 +88,7 @@ namespace ExtraStuffRevived
 
             if (uiText != null && uiObj != null)
             {
-                if (isPaused || isMapOpen)
+                if (isPaused || isMapOpen || isCharging)
                 {
                     uiObj.SetActive(false);
                 }
@@ -99,55 +105,76 @@ namespace ExtraStuffRevived
                 }
             }
 
-            bool isDashPressed = BasePlugin.IsRewiredCompatInstalled
-                ? InputManager.Instance.GetDigitalInput("UseDash", true)
-                : Input.GetKeyDown(KeyCode.R);
+            bool isHeld = BasePlugin.IsRewiredCompatInstalled
+                ? InputManager.Instance.GetDigitalInput("UseDash", false)
+                : Input.GetKey(KeyCode.R);
 
-            if (isDashPressed && dashesLeft > 0 && dashCooldown <= 0f && !pm.plm.Entity.Flipped)
+            bool isReleased = BasePlugin.IsRewiredCompatInstalled
+                ? !InputManager.Instance.GetDigitalInput("UseDash", false)
+                : Input.GetKeyUp(KeyCode.R);
+
+            if (isHeld && dashesLeft > 0 && dashCooldown <= 0f && !pm.plm.Entity.Flipped)
             {
-                if (pm.plm.stamina <= 5f)
+                if (!isCharging)
                 {
-                    var err = Resources.FindObjectsOfTypeAll<SoundObject>().FirstOrDefault(x => x != null && x.name == "ErrorMaybe");
-                    if (err != null && core != null)
-                        core.audMan.PlaySingle(err);
-                    return;
+                    isCharging = true;
+                    chargeTime = 0f;
+                    startStamina = pm.plm.stamina;
                 }
-
-                float dashCost = 15f;
-                float dashPower = Mathf.Clamp01(pm.plm.stamina / dashCost);
-
-                dashesLeft--;
-                dashCooldown = 0.5f;
-
-                pm.plm.stamina = Mathf.Max(0f, pm.plm.stamina - dashCost);
-
-                if (tossSound == null)
+                else
                 {
-                    tossSound = Resources.FindObjectsOfTypeAll<SoundObject>().FirstOrDefault(x => x != null && x.name == "CampfireToss");
+                    float drain = DrainRate * Time.deltaTime;
+                    pm.plm.stamina = Mathf.Max(0f, pm.plm.stamina - drain);
+                    chargeTime += Time.deltaTime;
+
+                    if (pm.plm.stamina <= 0f)
+                    {
+                        isCharging = false;
+                        ShowHudText();
+                        return;
+                    }
                 }
-
-                if (tossSound != null && core != null)
-                    core.audMan.PlaySingle(tossSound);
-
-                ShowHudText();
-                StartCoroutine(DashRoutine(dashPower));
+            }
+            else if (isReleased && isCharging)
+            {
+                isCharging = false;
+                ExecuteDash(core);
             }
 
-            if (dashesLeft <= 0 && textTimer <= 0f)
+            if (!isCharging && dashesLeft <= 0 && textTimer <= 0f)
             {
                 Destroy(this);
             }
+        }
+
+        private void ExecuteDash(CoreGameManager core)
+        {
+            float staminaUsed = startStamina - pm.plm.stamina;
+            float power = Mathf.Clamp01(staminaUsed / 30f);
+            if (power < 0.2f) power = 0.2f;
+
+            dashesLeft--;
+            dashCooldown = 0.5f;
+
+            if (tossSound == null)
+                tossSound = Resources.FindObjectsOfTypeAll<SoundObject>().FirstOrDefault(x => x != null && x.name == "CampfireToss");
+
+            if (tossSound != null && core != null)
+                core.audMan.PlaySingle(tossSound);
+
+            ShowHudText();
+            StartCoroutine(DashRoutine(power));
         }
 
         private void ShowHudText()
         {
             if (pm == null || Singleton<CoreGameManager>.Instance == null) return;
 
-            string localizedText = "Dash_HUD_Text";
+            string localizedText = "ExtraStuff_Dash_HUD_Text";
             var locManager = Singleton<LocalizationManager>.Instance;
             if (locManager != null)
             {
-                var text = locManager.GetLocalizedText("Dash_HUD_Text");
+                var text = locManager.GetLocalizedText("ExtraStuff_Dash_HUD_Text");
                 if (!string.IsNullOrEmpty(text)) localizedText = text;
             }
 
@@ -209,17 +236,16 @@ namespace ExtraStuffRevived
                 }
             }
 
-            float duration = 0.35f * Mathf.Max(0.2f, power);
+            float duration = 0.25f + (0.5f * power);
             float elapsed = 0f;
 
-            Vector3 dashDir = pm.transform.forward;
-            float dashSpeed = 45f * power;
+            float dashSpeed = 40f * power;
 
             var moveMod = new MovementModifier(Vector3.zero, 1f);
             pm.plm.am.moveMods.Add(moveMod);
 
             float startHeight = pm.plm.height;
-            float jumpHeight = 4f * power;
+            float jumpHeight = 4f;
 
             while (elapsed < duration)
             {
@@ -245,6 +271,14 @@ namespace ExtraStuffRevived
                 {
                     npc.Navigator.Entity.IgnoreEntity(pm.plm.Entity, false);
                 }
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (uiObj != null)
+            {
+                Object.Destroy(uiObj);
             }
         }
     }

@@ -13,11 +13,12 @@ namespace ExtraStuffRevived
             var cell = pm.ec.RandomCell(false, false, true);
             if (cell != null)
             {
-                pm.transform.position = cell.FloorWorldPosition + Vector3.up * 5f;
-                pm.plm.height = cell.FloorWorldPosition.y + 5f;
-                var audTeleport = Resources.FindObjectsOfTypeAll<SoundObject>().FirstOrDefault(x => x.name == "Teleport" || x.name == "AudTeleport");
+                pm.Teleport(cell.FloorWorldPosition);
+
+                var audTeleport = Resources.FindObjectsOfTypeAll<SoundObject>().FirstOrDefault(x => x != null && (x.name == "Teleport" || x.name == "AudTeleport"));
                 if (audTeleport != null) Singleton<CoreGameManager>.Instance.audMan.PlaySingle(audTeleport);
             }
+
             Object.Destroy(gameObject);
             return true;
         }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using ExtraStuffRevived;
 
 namespace ExtraStuffRevived
 {
@@ -46,40 +47,43 @@ namespace ExtraStuffRevived
                 if (flood != null && flood.gameObject.activeInHierarchy)
                 {
                     var buzzSound = Resources.FindObjectsOfTypeAll<SoundObject>().FirstOrDefault(x => x.name == "Buzzer" || x.name == "Error");
-                    if (buzzSound != null) Singleton<CoreGameManager>.Instance.audMan.PlaySingle(buzzSound);
+                    if (buzzSound != null && Singleton<CoreGameManager>.Instance != null) Singleton<CoreGameManager>.Instance.audMan.PlaySingle(buzzSound);
                     return false;
                 }
             }
 
             if (lighterSound == null)
             {
-                string path = Path.Combine(Application.streamingAssetsPath, "Modded", ModInfo.ID, "Audio", "Lighter.wav");
+                string path = BasePlugin.GetModFilePath("Audio", "Lighter.wav");
                 if (File.Exists(path))
                 {
                     lighterSound = ScriptableObject.CreateInstance<SoundObject>();
                     lighterSound.soundClip = AssetLoader.AudioClipFromFile(path);
                     lighterSound.soundType = SoundType.Effect;
                     lighterSound.subtitle = false;
+                    lighterSound.name = "ExtraStuff_LighterSound";
                 }
             }
 
             if (fireSound == null)
             {
-                string path = Path.Combine(Application.streamingAssetsPath, "Modded", ModInfo.ID, "Audio", "Fire.wav");
+                string path = BasePlugin.GetModFilePath("Audio", "Fire.wav");
                 if (File.Exists(path))
                 {
                     fireSound = ScriptableObject.CreateInstance<SoundObject>();
                     fireSound.soundClip = AssetLoader.AudioClipFromFile(path);
                     fireSound.soundType = SoundType.Effect;
                     fireSound.subtitle = false;
+                    fireSound.name = "ExtraStuff_FireSound";
                 }
             }
 
-            if (lighterSound != null && lighterSound.soundClip != null) Singleton<CoreGameManager>.Instance.audMan.PlaySingle(lighterSound);
+            if (lighterSound != null && lighterSound.soundClip != null && Singleton<CoreGameManager>.Instance != null)
+                Singleton<CoreGameManager>.Instance.audMan.PlaySingle(lighterSound);
 
             pm.RuleBreak("Bullying", 2f, 0.5f);
 
-            var baldi = pm.ec.GetBaldi();
+            var baldi = pm.ec != null ? pm.ec.GetBaldi() : null;
             if (baldi != null && baldi.Navigator != null && baldi.Navigator.Am != null)
             {
                 var speedMod = new MovementModifier(Vector3.zero, 0.2f);
@@ -94,7 +98,7 @@ namespace ExtraStuffRevived
                 if (appleField != null && droppedField != null)
                 {
                     var apple = appleField.GetValue(targetTree) as Pickup;
-                    bool isDropped = (bool)droppedField.GetValue(targetTree);
+                    bool isDropped = (bool)(droppedField.GetValue(targetTree) ?? false);
                     if (!isDropped && apple != null)
                     {
                         apple.transform.SetParent(null, true);
@@ -121,7 +125,7 @@ namespace ExtraStuffRevived
                 if (npcBurn == null)
                 {
                     npcBurn = targetNpc.gameObject.AddComponent<NpcBurn>();
-                    npcBurn.StartBurning(15f);
+                    npcBurn.StartBurning(30f);
                 }
             }
 
@@ -181,7 +185,18 @@ namespace ExtraStuffRevived
             {
                 isBurning = false;
                 foreach (var p in activeParticles) if (p != null) Destroy(p);
-                if (npc != null) npc.Despawn();
+
+                if (npc != null)
+                {
+                    if (Singleton<BaseGameManager>.Instance is EndlessGameManager)
+                    {
+                        Singleton<CoreGameManager>.Instance.StartCoroutine(ReviveNpcRoutine(npc));
+                    }
+                    else
+                    {
+                        npc.Despawn();
+                    }
+                }
                 return;
             }
 
@@ -194,6 +209,42 @@ namespace ExtraStuffRevived
             }
         }
 
+        private IEnumerator ReviveNpcRoutine(NPC npcToRevive)
+        {
+            var renderers = npcToRevive.GetComponentsInChildren<SpriteRenderer>();
+            foreach (var r in renderers) if (r != null) r.enabled = false;
+
+            var colliders = npcToRevive.GetComponentsInChildren<Collider>();
+            foreach (var c in colliders) if (c != null) c.enabled = false;
+
+            if (npcToRevive.Navigator != null) npcToRevive.Navigator.enabled = false;
+            npcToRevive.enabled = false;
+
+            yield return new WaitForSeconds(30f);
+
+            if (npcToRevive != null)
+            {
+                npcToRevive.enabled = true;
+                if (npcToRevive.Navigator != null) npcToRevive.Navigator.enabled = true;
+
+                foreach (var r in renderers) if (r != null) r.enabled = true;
+                foreach (var c in colliders) if (c != null) c.enabled = true;
+
+                if (npcToRevive.ec != null)
+                {
+                    var cell = npcToRevive.ec.RandomCell(false, false, true);
+                    if (cell != null)
+                    {
+                        npcToRevive.transform.position = cell.FloorWorldPosition;
+                        if (npcToRevive.Navigator != null && npcToRevive.Navigator.Entity != null)
+                        {
+                            npcToRevive.Navigator.Entity.Teleport(cell.FloorWorldPosition);
+                        }
+                    }
+                }
+            }
+        }
+
         private void SpawnParticle()
         {
             var particleObj = new GameObject("FireParticle");
@@ -201,7 +252,8 @@ namespace ExtraStuffRevived
             particleObj.transform.localPosition = new Vector3(Random.Range(-1f, 1f), Random.Range(0f, 3f), Random.Range(-1f, 1f));
 
             var renderer = particleObj.AddComponent<SpriteRenderer>();
-            if (BasePlugin.assetManager != null && BasePlugin.assetManager.ContainsKey("Sprites/FireParticles")) renderer.sprite = BasePlugin.assetManager.Get<Sprite>("Sprites/FireParticles");
+            if (BasePlugin.assetManager != null && BasePlugin.assetManager.ContainsKey("Sprites/FireParticles"))
+                renderer.sprite = BasePlugin.assetManager.Get<Sprite>("Sprites/FireParticles");
 
             var billboardMaterial = Resources.FindObjectsOfTypeAll<Material>().FirstOrDefault(m => m.name == "SpriteStandard_Billboard_NoGlitch" || m.name == "SpriteStandard_Billboard");
             if (billboardMaterial != null) renderer.material = billboardMaterial;
@@ -316,7 +368,8 @@ namespace ExtraStuffRevived
             particleObj.transform.localPosition = new Vector3(Random.Range(-1.5f, 1.5f), Random.Range(0f, 5f), Random.Range(-1.5f, 1.5f));
 
             var renderer = particleObj.AddComponent<SpriteRenderer>();
-            if (BasePlugin.assetManager != null && BasePlugin.assetManager.ContainsKey("Sprites/FireParticles")) renderer.sprite = BasePlugin.assetManager.Get<Sprite>("Sprites/FireParticles");
+            if (BasePlugin.assetManager != null && BasePlugin.assetManager.ContainsKey("Sprites/FireParticles"))
+                renderer.sprite = BasePlugin.assetManager.Get<Sprite>("Sprites/FireParticles");
 
             var billboardMaterial = Resources.FindObjectsOfTypeAll<Material>().FirstOrDefault(m => m.name == "SpriteStandard_Billboard_NoGlitch" || m.name == "SpriteStandard_Billboard");
             if (billboardMaterial != null) renderer.material = billboardMaterial;

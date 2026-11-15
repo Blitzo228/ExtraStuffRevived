@@ -70,15 +70,53 @@ namespace ExtraStuffRevived
             if (door == null) return;
 
             var room = GetRoom();
-            if (room != null && UnlockedRooms.Contains(room))
+            if (room == null) return;
+
+            if (UnlockedRooms.Contains(room))
             {
                 if (!unlocked) UnlockPermanently();
+                return;
+            }
+
+            if (unlocked) return;
+
+            var ec = door.ec;
+            if (ec != null && ec.Players != null)
+            {
+                foreach (var player in ec.Players)
+                {
+                    if (player == null || player.plm == null) continue;
+
+                    var playerCell = ec.CellFromPosition(player.transform.position);
+
+                    if (playerCell != null && (playerCell.room == room || room.containsPosition(player.transform.position)))
+                    {
+                        UnlockPermanently();
+                        break;
+                    }
+                }
             }
 
             if (!unlocked)
             {
-                if (!door.locked) door.Lock(true);
-                if (door.open) door.Shut();
+                bool hasNpc = false;
+                if (ec != null && ec.Npcs != null)
+                {
+                    foreach (var npc in ec.Npcs)
+                    {
+                        if (npc != null && room.containsPosition(npc.transform.position))
+                        {
+                            hasNpc = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!hasNpc)
+                {
+                    if (!door.locked) door.Lock(true);
+                    if (door.open) door.Shut();
+                }
             }
         }
 
