@@ -36,7 +36,8 @@ namespace ExtraStuffRevived
 
             if (bsodaPrefab == null)
             {
-                bsodaPrefab = Resources.FindObjectsOfTypeAll<ITM_BSODA>().FirstOrDefault();
+                bsodaPrefab = Resources.FindObjectsOfTypeAll<ITM_BSODA>()
+                    .FirstOrDefault(x => x != null && !x.gameObject.scene.IsValid() && x.GetType().Assembly == typeof(ITM_BSODA).Assembly);
             }
 
             if (bsodaPrefab != null)

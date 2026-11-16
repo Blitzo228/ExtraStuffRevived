@@ -1,4 +1,5 @@
-﻿using MTM101BaldAPI.Registers;
+﻿#nullable disable
+using MTM101BaldAPI.Registers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,19 +38,20 @@ namespace ExtraStuffRevived
 
     public class DashComponent : MonoBehaviour
     {
-        private PlayerManager? pm;
+        private PlayerManager pm;
         private int dashesLeft = 0;
         private float dashCooldown = 0f;
         private int initialLives = 0;
 
-        private GameObject? uiObj;
-        private TextMeshProUGUI? uiText;
+        private GameObject uiObj;
+        private TextMeshProUGUI uiText;
         private float textTimer = 0f;
-        private static SoundObject? tossSound;
+        private static SoundObject tossSound;
 
         private bool isCharging = false;
         private float chargeTime = 0f;
         private float startStamina = 0f;
+        private bool wasDashHeld = false;
         private const float MaxChargeTime = 1.5f;
         private const float DrainRate = 15f;
 
@@ -105,15 +107,21 @@ namespace ExtraStuffRevived
                 }
             }
 
-            bool isHeld = BasePlugin.IsRewiredCompatInstalled
-                ? InputManager.Instance.GetDigitalInput("UseDash", false)
-                : Input.GetKey(KeyCode.R);
+            bool isHeld = Input.GetKey(KeyCode.R);
+            if (BasePlugin.IsRewiredCompatInstalled)
+            {
+                try
+                {
+                    if (InputManager.Instance != null && InputManager.Instance.GetDigitalInput("UseDash", false))
+                        isHeld = true;
+                }
+                catch { }
+            }
 
-            bool isReleased = BasePlugin.IsRewiredCompatInstalled
-                ? !InputManager.Instance.GetDigitalInput("UseDash", false)
-                : Input.GetKeyUp(KeyCode.R);
+            bool isReleased = wasDashHeld && !isHeld;
+            wasDashHeld = isHeld;
 
-            if (isHeld && dashesLeft > 0 && dashCooldown <= 0f && !pm.plm.Entity.Flipped)
+            if (isHeld && dashesLeft > 0 && dashCooldown <= 0f && !pm.plm.Entity.Flipped && !isPaused && !isMapOpen)
             {
                 if (!isCharging)
                 {
@@ -192,7 +200,7 @@ namespace ExtraStuffRevived
 
                 uiText = uiObj.AddComponent<TextMeshProUGUI>();
 
-                TMP_FontAsset? fontAsset = null;
+                TMP_FontAsset fontAsset = null;
                 var hudText = hud.GetComponentInChildren<TMP_Text>();
                 if (hudText != null) fontAsset = hudText.font;
                 if (fontAsset != null) uiText.font = fontAsset;

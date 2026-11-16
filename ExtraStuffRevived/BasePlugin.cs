@@ -1,11 +1,13 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
+using System.Reflection;
 using BepInEx;
 using BepInEx.Bootstrap;
+using BepInEx.Configuration;
 using HarmonyLib;
 using MTM101BaldAPI;
 using MTM101BaldAPI.AssetTools;
@@ -15,6 +17,7 @@ using PlusStudioLevelFormat;
 using PlusStudioLevelLoader;
 using UnityEngine;
 using UnityEngine.Audio;
+using BBPRewiredCompat;
 
 namespace ExtraStuffRevived
 {
@@ -22,21 +25,25 @@ namespace ExtraStuffRevived
     [BepInDependency(MTM101BaldiDevAPI.ModGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency("mtm101.rulerp.baldiplus.levelstudio", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("mtm101.rulerp.baldiplus.levelstudioloader", BepInDependency.DependencyFlags.HardDependency)]
-    [BepInDependency("alexbw145.bbplus.rewiredcompat", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("alexbw145.bbplus.rewiredcompat", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency("mtm101.rulerp.baldiplus.criminalpackroot", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("io.github.uncertainluei.baldiplus.recommendedchars", BepInDependency.DependencyFlags.SoftDependency)]
     public class BasePlugin : BaseUnityPlugin
     {
-        public static BasePlugin Instance = null!;
+        public static BasePlugin Instance;
         public static AssetManager assetManager = new AssetManager();
         public static Dictionary<string, ItemObject> ModItems = new Dictionary<string, ItemObject>();
 
-        public static bool IsRewiredCompatInstalled { get; private set; }
+        public static Dictionary<string, ConfigEntry<bool>> EnabledItems = new Dictionary<string, ConfigEntry<bool>>();
+        public static ConfigEntry<bool> ForceMiniBsodas;
+
+        public static bool IsRewiredCompatInstalled => true;
         private static bool inputsRegistered = false;
 
         public static Sticker NotebookSticker;
-        public static Sprite? NotebookStickerSprite;
+        public static Sprite NotebookStickerSprite;
         public static Sticker BsodaBonusSticker;
-        public static Sprite? BsodaBonusStickerSprite;
+        public static Sprite BsodaBonusStickerSprite;
 
         public static string ModAssetsPath => Path.Combine(Application.streamingAssetsPath, "Modded", ModInfo.ID);
 
@@ -52,14 +59,66 @@ namespace ExtraStuffRevived
             return path;
         }
 
+        private void BindItemConfig(string key, string name, bool defaultVal = true)
+        {
+            EnabledItems[key] = Config.Bind("Items Toggle", key, defaultVal, $"Enable or disable {name}.");
+        }
+
         private void Awake()
         {
             Instance = this;
-            IsRewiredCompatInstalled = Chainloader.PluginInfos.ContainsKey("alexbw145.bbplus.rewiredcompat");
+
+            BindItemConfig("itm_ruby", "YTP Ruby");
+            BindItemConfig("itm_emerald", "YTP Emerald");
+            BindItemConfig("itm_random_ytp", "YTP Random");
+            BindItemConfig("itm_christmasytp", "YTP Christmas");
+            BindItemConfig("itm_eventytp", "YTP Event");
+            BindItemConfig("itm_energy_drink", "Energy Drink");
+            BindItemConfig("itm_clean_chalk_eraser", "Clean Chalk Eraser");
+            BindItemConfig("itm_hammer_reflex", "Reflex Hammer");
+            BindItemConfig("itm_prototype_teleporter", "Prototype Teleporter");
+            BindItemConfig("itm_starfire", "Star Fire");
+            BindItemConfig("itm_lighter", "Lighter");
+            BindItemConfig("itm_waterbott", "Water Bottle");
+            BindItemConfig("itm_coindoor", "Coin Door");
+            BindItemConfig("itm_coolplant", "Hideable Plant");
+            BindItemConfig("itm_paintbucket", "Paint Bucket");
+            BindItemConfig("itm_gravitystick", "Gravity Stick");
+            BindItemConfig("itm_dash", "Dash");
+            BindItemConfig("itm_officekey", "Baldi's Office Key");
+            BindItemConfig("itm_pinkgum", "Pink Gum");
+            BindItemConfig("itm_oldcandy", "Old Candy");
+            BindItemConfig("itm_speedyelixir", "Speedy Elixir");
+            BindItemConfig("itm_backpack_unfull", "Backpack (Empty)");
+            BindItemConfig("itm_backpack_full", "Backpack (Full)");
+            BindItemConfig("itm_nutella", "Nutella");
+            BindItemConfig("itm_teacher_nametag", "Teacher Nametag");
+            BindItemConfig("itm_eventcontroller", "Event Controller");
+            BindItemConfig("itm_blastbsoda", "Blast BSODA");
+            BindItemConfig("itm_bsodaplus", "BSODA+");
+            BindItemConfig("itm_randomizer", "Randomizer");
+            BindItemConfig("itm_baldiwhistle", "Baldi's Whistle");
+            BindItemConfig("itm_coolusefulteleporter", "Useful Teleporter");
+            BindItemConfig("itm_safetyshuriken", "Safety Shuriken");
+            BindItemConfig("itm_darkcoffee", "Dark Coffee");
+            BindItemConfig("itm_specialteapot", "Special Teapot");
+            BindItemConfig("itm_detentionpass", "Detention Pass");
+            BindItemConfig("itm_reallydangerousteleporter", "Really Dangerous Teleporter");
+            BindItemConfig("itm_juicebottle", "Juice Bottle");
+            BindItemConfig("itm_controlleralarmclock", "Controlled Alarm Clock");
+            BindItemConfig("itm_instantbalder", "Instant Balder");
+            BindItemConfig("itm_instantbalder_infinite", "Infinite Instant Balder");
+            BindItemConfig("itm_tastyburger", "Tasty Burger");
+            BindItemConfig("itm_kimcola", "Kimim Cola");
+
+            BindItemConfig("itm_blastbsodamini", "Blast BSODA Mini");
+            BindItemConfig("itm_bsodaplusmini", "BSODA+ Mini");
+
+            ForceMiniBsodas = Config.Bind("General", "Force Mini BSODAs", false, "Forces the Mini BSODAs to appear even if Recommended Characters Pack (RCP) is not installed.");
 
             Harmony harmony = new Harmony(ModInfo.ID);
 
-            foreach (var type in System.Reflection.Assembly.GetExecutingAssembly().GetTypes())
+            foreach (var type in Assembly.GetExecutingAssembly().GetTypes())
             {
                 if (type.GetCustomAttributes(typeof(HarmonyPatch), true).Length > 0 ||
                     type.GetCustomAttributes(typeof(HarmonyPatch), false).Length > 0)
@@ -94,20 +153,15 @@ namespace ExtraStuffRevived
             Instance.gameObject.AddComponent<BackpackInjector>();
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static void RegisterRewiredInputs()
-        {
-            if (!IsRewiredCompatInstalled || inputsRegistered) return;
-            BBPRewiredCompat.RewiredPlusManager.CreateNewInput(name: "UseDash", descriptionName: "Use Dash", behaviorID: BBPRewiredCompat.RewiredPlusManager.InputBehaviorID.Snap, categoryID: BBPRewiredCompat.RewiredPlusManager.InputMapCategory.Actions, key: KeyCode.R);
-            BBPRewiredCompat.RewiredPlusManager.CreateNewInput(name: "UseBackpack", descriptionName: "Use Backpack", behaviorID: BBPRewiredCompat.RewiredPlusManager.InputBehaviorID.Snap, categoryID: BBPRewiredCompat.RewiredPlusManager.InputMapCategory.Actions, key: KeyCode.X);
-            inputsRegistered = true;
-        }
-
         [HarmonyPatch(typeof(NameManager), "Awake")]
         [HarmonyPrefix]
         private static void RegisterInputsOnGameStart()
         {
-            if (IsRewiredCompatInstalled) RegisterRewiredInputs();
+            if (inputsRegistered) return;
+            inputsRegistered = true;
+
+            RewiredPlusManager.CreateNewInput("UseDash", "Use Dash", (RewiredPlusManager.InputBehaviorID)1, (RewiredPlusManager.InputMapCategory)1, KeyCode.R, -1, -1);
+            RewiredPlusManager.CreateNewInput("UseBackpack", "Use Backpack", (RewiredPlusManager.InputBehaviorID)1, (RewiredPlusManager.InputMapCategory)1, KeyCode.X, -1, -1);
         }
 
         private void AddPrefixedAsset(string key, UnityEngine.Object asset)
@@ -182,9 +236,12 @@ namespace ExtraStuffRevived
                 ("TeacherNametagIcon_Small.png", "Sprites/TeacherNametagIcon_Small"), ("TeacherNametagIcon_Large.png", "Sprites/TeacherNametagIcon_Large"),
                 ("EventControllerIcon_Small.png", "Sprites/EventControllerIcon_Small"), ("EventControllerIcon_Large.png", "Sprites/EventControllerIcon_Large"),
                 ("BlastBsodaIcon_Small.png", "Sprites/BlastBsodaIcon_Small"), ("BlastBsodaIcon_Large.png", "Sprites/BlastBsodaIcon_Large"),
+                ("BlastBsodaMiniIcon_Small.png", "Sprites/BlastBsodaMiniIcon_Small"), ("BlastBsodaMiniIcon_Large.png", "Sprites/BlastBsodaMiniIcon_Large"),
                 ("BlastBsodaSpray_Sprite_Transparent.png", "Sprites/BlastBsodaSpray_Sprite_Transparent"),
                 ("BSODAPlusIcon_Small.png", "Sprites/BSODAPlusIcon_Small"),
                 ("BSODAPlusIcon_Large.png", "Sprites/BSODAPlusIcon_Large"),
+                ("BSODAPlusMiniIcon_Small.png", "Sprites/BSODAPlusMiniIcon_Small"),
+                ("BSODAPlusMiniIcon_Large.png", "Sprites/BSODAPlusMiniIcon_Large"),
                 ("BsodaSpray_Sprite_Transparent.png", "Sprites/BsodaSpray_Sprite_Transparent"),
                 ("RandomizerItemIcon_Small.png", "Sprites/RandomizerItemIcon_Small"), ("RandomizerItemIcon_Large.png", "Sprites/RandomizerItemIcon_Large"),
                 ("BaldiWhistleIcon_Small.png", "Sprites/BaldiWhistleIcon_Small"), ("BaldiWhistleIcon_Large.png", "Sprites/BaldiWhistleIcon_Large"),
@@ -362,17 +419,17 @@ namespace ExtraStuffRevived
 
         private void CreateItems()
         {
-            SoundObject? rubySound = assetManager.ContainsKey("Sounds/ruby_sound") ? assetManager.Get<SoundObject>("Sounds/ruby_sound") : null;
-            SoundObject? emeraldSound = assetManager.ContainsKey("Sounds/emerald_sound") ? assetManager.Get<SoundObject>("Sounds/emerald_sound") : null;
+            SoundObject rubySound = assetManager.ContainsKey("Sounds/ruby_sound") ? assetManager.Get<SoundObject>("Sounds/ruby_sound") : null;
+            SoundObject emeraldSound = assetManager.ContainsKey("Sounds/emerald_sound") ? assetManager.Get<SoundObject>("Sounds/emerald_sound") : null;
 
-            ITM_YTPs? vanillaPoints = null;
+            ITM_YTPs vanillaPoints = null;
             var allItems = Resources.FindObjectsOfTypeAll<ITM_YTPs>();
             for (int i = 0; i < allItems.Length; i++)
             {
                 if (allItems[i] != null && !allItems[i].gameObject.scene.IsValid()) { vanillaPoints = allItems[i]; break; }
             }
 
-            if (assetManager.ContainsKey("Sprites/itm_ruby"))
+            if (EnabledItems["itm_ruby"].Value && assetManager.ContainsKey("Sprites/itm_ruby"))
             {
                 Sprite rubySpriteSmall = assetManager.ContainsKey("Sprites/YTP_Ruby_Small") ? assetManager.Get<Sprite>("Sprites/YTP_Ruby_Small") : assetManager.Get<Sprite>("Sprites/itm_ruby");
                 Sprite rubySpriteLarge = assetManager.Get<Sprite>("Sprites/itm_ruby");
@@ -400,7 +457,7 @@ namespace ExtraStuffRevived
                 }
             }
 
-            if (assetManager.ContainsKey("Sprites/itm_emerald"))
+            if (EnabledItems["itm_emerald"].Value && assetManager.ContainsKey("Sprites/itm_emerald"))
             {
                 Sprite emeraldSpriteSmall = assetManager.ContainsKey("Sprites/YTP_Emerald_Small") ? assetManager.Get<Sprite>("Sprites/YTP_Emerald_Small") : assetManager.Get<Sprite>("Sprites/itm_emerald");
                 Sprite emeraldSpriteLarge = assetManager.Get<Sprite>("Sprites/itm_emerald");
@@ -428,11 +485,11 @@ namespace ExtraStuffRevived
                 }
             }
 
-            if (assetManager.ContainsKey("Sprites/YTP_Random"))
+            if (EnabledItems["itm_random_ytp"].Value && assetManager.ContainsKey("Sprites/YTP_Random"))
             {
                 Sprite randomSpriteSmall = assetManager.ContainsKey("Sprites/YTP_Random_Small") ? assetManager.Get<Sprite>("Sprites/YTP_Random_Small") : assetManager.Get<Sprite>("Sprites/YTP_Random");
                 Sprite randomSpriteLarge = assetManager.Get<Sprite>("Sprites/YTP_Random");
-                SoundObject? randomSound = assetManager.ContainsKey("Sounds/random_pickup") ? assetManager.Get<SoundObject>("Sounds/random_pickup") : null;
+                SoundObject randomSound = assetManager.ContainsKey("Sounds/random_pickup") ? assetManager.Get<SoundObject>("Sounds/random_pickup") : null;
                 if (randomSpriteSmall != null && randomSpriteLarge != null)
                 {
                     var randomItem = new ItemBuilder(Info).SetEnum("Itm_RandomYTP").SetNameAndDescription("ExtraStuff_Itm_YTP_Random", "ExtraStuff_Desc_YTP_Random").SetSprites(randomSpriteSmall, randomSpriteLarge).SetGeneratorCost(0).SetAsInstantUse().Build();
@@ -457,11 +514,11 @@ namespace ExtraStuffRevived
                 }
             }
 
-            if (assetManager.ContainsKey("Sprites/ChristmasYTP_Small") && assetManager.ContainsKey("Sprites/ChristmasYTP_Large"))
+            if (EnabledItems["itm_christmasytp"].Value && assetManager.ContainsKey("Sprites/ChristmasYTP_Small") && assetManager.ContainsKey("Sprites/ChristmasYTP_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/ChristmasYTP_Small");
                 var large = assetManager.Get<Sprite>("Sprites/ChristmasYTP_Large");
-                SoundObject? christmasSound = assetManager.ContainsKey("Sounds/christmas_ytp") ? assetManager.Get<SoundObject>("Sounds/christmas_ytp") : null;
+                SoundObject christmasSound = assetManager.ContainsKey("Sounds/christmas_ytp") ? assetManager.Get<SoundObject>("Sounds/christmas_ytp") : null;
                 if (small != null && large != null)
                 {
                     var christmasItem = new ItemBuilder(Info).SetEnum("BaldiFrenzyChristmasYTP").SetNameAndDescription("ExtraStuff_Itm_ChristmasYTP", "ExtraStuff_Desc_ChristmasYTP").SetSprites(small, large).SetGeneratorCost(125).SetAsInstantUse().Build();
@@ -486,11 +543,11 @@ namespace ExtraStuffRevived
                 }
             }
 
-            if (assetManager.ContainsKey("Sprites/YTPEvent_Small") && assetManager.ContainsKey("Sprites/YTPEvent_Large"))
+            if (EnabledItems["itm_eventytp"].Value && assetManager.ContainsKey("Sprites/YTPEvent_Small") && assetManager.ContainsKey("Sprites/YTPEvent_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/YTPEvent_Small");
                 var large = assetManager.Get<Sprite>("Sprites/YTPEvent_Large");
-                SoundObject? eventSound = assetManager.ContainsKey("Sounds/event_ytp") ? assetManager.Get<SoundObject>("Sounds/event_ytp") : null;
+                SoundObject eventSound = assetManager.ContainsKey("Sounds/event_ytp") ? assetManager.Get<SoundObject>("Sounds/event_ytp") : null;
                 if (small != null && large != null)
                 {
                     var eventItem = new ItemBuilder(Info).SetEnum("Itm_EventYTP").SetNameAndDescription("ExtraStuff_Itm_EventYTP", "ExtraStuff_Desc_EventYTP").SetSprites(small, large).SetGeneratorCost(150).SetAsInstantUse().Build();
@@ -515,7 +572,7 @@ namespace ExtraStuffRevived
                 }
             }
 
-            if (assetManager.ContainsKey("Sprites/itm_energy_small") && assetManager.ContainsKey("Sprites/itm_energy_large"))
+            if (EnabledItems["itm_energy_drink"].Value && assetManager.ContainsKey("Sprites/itm_energy_small") && assetManager.ContainsKey("Sprites/itm_energy_large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/itm_energy_small");
                 var large = assetManager.Get<Sprite>("Sprites/itm_energy_large");
@@ -526,7 +583,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_energy_drink", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/itm_chalk_eraser_small") && assetManager.ContainsKey("Sprites/itm_chalk_eraser_large"))
+            if (EnabledItems["itm_clean_chalk_eraser"].Value && assetManager.ContainsKey("Sprites/itm_chalk_eraser_small") && assetManager.ContainsKey("Sprites/itm_chalk_eraser_large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/itm_chalk_eraser_small");
                 var large = assetManager.Get<Sprite>("Sprites/itm_chalk_eraser_large");
@@ -537,7 +594,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_clean_chalk_eraser", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/ReflexHammerIcon_Small") && assetManager.ContainsKey("Sprites/ReflexHammerIcon_Large"))
+            if (EnabledItems["itm_hammer_reflex"].Value && assetManager.ContainsKey("Sprites/ReflexHammerIcon_Small") && assetManager.ContainsKey("Sprites/ReflexHammerIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/ReflexHammerIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/ReflexHammerIcon_Large");
@@ -548,7 +605,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_hammer_reflex", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/PrototypeTeleporterIcon_Small") && assetManager.ContainsKey("Sprites/PrototypeTeleporterIcon_Large"))
+            if (EnabledItems["itm_prototype_teleporter"].Value && assetManager.ContainsKey("Sprites/PrototypeTeleporterIcon_Small") && assetManager.ContainsKey("Sprites/PrototypeTeleporterIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/PrototypeTeleporterIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/PrototypeTeleporterIcon_Large");
@@ -559,7 +616,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_prototype_teleporter", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/StarFireIcon_Small") && assetManager.ContainsKey("Sprites/StarFireIcon_Large"))
+            if (EnabledItems["itm_starfire"].Value && assetManager.ContainsKey("Sprites/StarFireIcon_Small") && assetManager.ContainsKey("Sprites/StarFireIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/StarFireIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/StarFireIcon_Large");
@@ -572,7 +629,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_starfire", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/LighterIcon_Small") && assetManager.ContainsKey("Sprites/LighterIcon_Large"))
+            if (EnabledItems["itm_lighter"].Value && assetManager.ContainsKey("Sprites/LighterIcon_Small") && assetManager.ContainsKey("Sprites/LighterIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/LighterIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/LighterIcon_Large");
@@ -583,7 +640,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_lighter", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/WaterBottleIcon_Small") && assetManager.ContainsKey("Sprites/WaterBottleIcon_Large"))
+            if (EnabledItems["itm_waterbott"].Value && assetManager.ContainsKey("Sprites/WaterBottleIcon_Small") && assetManager.ContainsKey("Sprites/WaterBottleIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/WaterBottleIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/WaterBottleIcon_Large");
@@ -594,7 +651,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_waterbott", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/itm_coindoor_small") && assetManager.ContainsKey("Sprites/itm_coindoor_large"))
+            if (EnabledItems["itm_coindoor"].Value && assetManager.ContainsKey("Sprites/itm_coindoor_small") && assetManager.ContainsKey("Sprites/itm_coindoor_large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/itm_coindoor_small");
                 var large = assetManager.Get<Sprite>("Sprites/itm_coindoor_large");
@@ -605,7 +662,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_coindoor", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/CoolPlantIcon_Small") && assetManager.ContainsKey("Sprites/CoolPlantIcon_Large"))
+            if (EnabledItems["itm_coolplant"].Value && assetManager.ContainsKey("Sprites/CoolPlantIcon_Small") && assetManager.ContainsKey("Sprites/CoolPlantIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/CoolPlantIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/CoolPlantIcon_Large");
@@ -616,7 +673,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_coolplant", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/PaintBucketIcon_Small") && assetManager.ContainsKey("Sprites/PaintBucketIcon_Large"))
+            if (EnabledItems["itm_paintbucket"].Value && assetManager.ContainsKey("Sprites/PaintBucketIcon_Small") && assetManager.ContainsKey("Sprites/PaintBucketIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/PaintBucketIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/PaintBucketIcon_Large");
@@ -627,7 +684,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_paintbucket", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/GravityStickIcon_Small") && assetManager.ContainsKey("Sprites/GravityStickIcon_Large"))
+            if (EnabledItems["itm_gravitystick"].Value && assetManager.ContainsKey("Sprites/GravityStickIcon_Small") && assetManager.ContainsKey("Sprites/GravityStickIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/GravityStickIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/GravityStickIcon_Large");
@@ -638,7 +695,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_gravitystick", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/DashIcon_Small") && assetManager.ContainsKey("Sprites/DashIcon_Large"))
+            if (EnabledItems["itm_dash"].Value && assetManager.ContainsKey("Sprites/DashIcon_Small") && assetManager.ContainsKey("Sprites/DashIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/DashIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/DashIcon_Large");
@@ -649,7 +706,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_dash", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/BaldiOfficeKeyIcon_Small") && assetManager.ContainsKey("Sprites/BaldiOfficeKeyIcon_Large"))
+            if (EnabledItems["itm_officekey"].Value && assetManager.ContainsKey("Sprites/BaldiOfficeKeyIcon_Small") && assetManager.ContainsKey("Sprites/BaldiOfficeKeyIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/BaldiOfficeKeyIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/BaldiOfficeKeyIcon_Large");
@@ -660,7 +717,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_officekey", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/DetentionPassIcon_Small") && assetManager.ContainsKey("Sprites/DetentionPassIcon_Large"))
+            if (EnabledItems["itm_detentionpass"].Value && assetManager.ContainsKey("Sprites/DetentionPassIcon_Small") && assetManager.ContainsKey("Sprites/DetentionPassIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/DetentionPassIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/DetentionPassIcon_Large");
@@ -671,7 +728,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_detentionpass", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/ReallyTeleporterIcon_Small") && assetManager.ContainsKey("Sprites/ReallyTeleporterIcon_Large"))
+            if (EnabledItems["itm_reallydangerousteleporter"].Value && assetManager.ContainsKey("Sprites/ReallyTeleporterIcon_Small") && assetManager.ContainsKey("Sprites/ReallyTeleporterIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/ReallyTeleporterIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/ReallyTeleporterIcon_Large");
@@ -682,7 +739,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_reallydangerousteleporter", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/JuiceBottleIcon_Small") && assetManager.ContainsKey("Sprites/JuiceBottleIcon_Large"))
+            if (EnabledItems["itm_juicebottle"].Value && assetManager.ContainsKey("Sprites/JuiceBottleIcon_Small") && assetManager.ContainsKey("Sprites/JuiceBottleIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/JuiceBottleIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/JuiceBottleIcon_Large");
@@ -693,7 +750,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_juicebottle", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/ControllerAlarmClockIcon_Small") && assetManager.ContainsKey("Sprites/ControllerAlarmClockIcon_Large"))
+            if (EnabledItems["itm_controlleralarmclock"].Value && assetManager.ContainsKey("Sprites/ControllerAlarmClockIcon_Small") && assetManager.ContainsKey("Sprites/ControllerAlarmClockIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/ControllerAlarmClockIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/ControllerAlarmClockIcon_Large");
@@ -704,7 +761,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_controlleralarmclock", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/InstantBalderIcon_Small") && assetManager.ContainsKey("Sprites/InstantBalderIcon_Large"))
+            if (EnabledItems["itm_instantbalder"].Value && assetManager.ContainsKey("Sprites/InstantBalderIcon_Small") && assetManager.ContainsKey("Sprites/InstantBalderIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/InstantBalderIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/InstantBalderIcon_Large");
@@ -713,14 +770,21 @@ namespace ExtraStuffRevived
                     var item = new ItemBuilder(Info).SetEnum("Itm_InstantBalder").SetNameAndDescription("ExtraStuff_Itm_InstantBalder", "ExtraStuff_Desc_InstantBalder").SetSprites(small, large).SetGeneratorCost(200).SetShopPrice(600).SetItemComponent<ITM_InstantBalder>().SetMeta(ItemFlags.Persists, new string[] { "tool", "weapon", "crmp_contraband" }).Build();
                     item.name = "ExtraStuff_Itm_InstantBalder";
                     ModItems.Add("itm_instantbalder", item);
-
-                    var item2 = new ItemBuilder(Info).SetEnum("Itm_InstantBalder_Infinite").SetNameAndDescription("ExtraStuff_Itm_InstantBalder_Infinite", "ExtraStuff_Desc_InstantBalder_Infinite").SetSprites(small, large).SetGeneratorCost(0).SetShopPrice(999999).SetItemComponent<ITM_InstantBalder_Infinite>().SetMeta(ItemFlags.Unobtainable, new string[] { "tool", "weapon", "crmp_contraband" }).Build();
-                    item2.name = "ExtraStuff_Itm_InstantBalder_Infinite";
-                    ModItems.Add("itm_instantbalder_infinite", item2);
+                }
+            }
+            if (EnabledItems["itm_instantbalder_infinite"].Value && assetManager.ContainsKey("Sprites/InstantBalderIcon_Small") && assetManager.ContainsKey("Sprites/InstantBalderIcon_Large"))
+            {
+                var small = assetManager.Get<Sprite>("Sprites/InstantBalderIcon_Small");
+                var large = assetManager.Get<Sprite>("Sprites/InstantBalderIcon_Large");
+                if (small != null && large != null)
+                {
+                    var item = new ItemBuilder(Info).SetEnum("Itm_InstantBalder_Infinite").SetNameAndDescription("ExtraStuff_Itm_InstantBalder_Infinite", "ExtraStuff_Desc_InstantBalder_Infinite").SetSprites(small, large).SetGeneratorCost(0).SetShopPrice(999999).SetItemComponent<ITM_InstantBalder_Infinite>().SetMeta(ItemFlags.Unobtainable, new string[] { "tool", "weapon", "crmp_contraband" }).Build();
+                    item.name = "ExtraStuff_Itm_InstantBalder_Infinite";
+                    ModItems.Add("itm_instantbalder_infinite", item);
                 }
             }
 
-            if (assetManager.ContainsKey("Sprites/BSODAPlusIcon_Small") && assetManager.ContainsKey("Sprites/BSODAPlusIcon_Large"))
+            if (EnabledItems["itm_bsodaplus"].Value && assetManager.ContainsKey("Sprites/BSODAPlusIcon_Small") && assetManager.ContainsKey("Sprites/BSODAPlusIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/BSODAPlusIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/BSODAPlusIcon_Large");
@@ -732,10 +796,37 @@ namespace ExtraStuffRevived
                 }
             }
 
-            ItemObject? unfullBp = null;
-            ItemObject? fullBp = null;
+            if (ForceMiniBsodas.Value || Chainloader.PluginInfos.ContainsKey("io.github.uncertainluei.baldiplus.recommendedchars"))
+            {
+                if (EnabledItems["itm_blastbsodamini"].Value && assetManager.ContainsKey("Sprites/BlastBsodaMiniIcon_Small") && assetManager.ContainsKey("Sprites/BlastBsodaMiniIcon_Large"))
+                {
+                    var small = assetManager.Get<Sprite>("Sprites/BlastBsodaMiniIcon_Small");
+                    var large = assetManager.Get<Sprite>("Sprites/BlastBsodaMiniIcon_Large");
+                    if (small != null && large != null)
+                    {
+                        var item = new ItemBuilder(Info).SetEnum("Itm_BlastBsodaMini").SetNameAndDescription("ExtraStuff_Itm_BlastBsodaMini", "ExtraStuff_Desc_BlastBsodaMini").SetSprites(small, large).SetGeneratorCost(40).SetShopPrice(175).SetItemComponent<ITM_BlastBsoda>().SetMeta(ItemFlags.Persists, new string[] { "drink", "food" }).Build();
+                        item.name = "ExtraStuff_Itm_BlastBsodaMini";
+                        ModItems.Add("itm_blastbsodamini", item);
+                    }
+                }
 
-            if (assetManager.ContainsKey("Sprites/UnFullBackpack_Small") && assetManager.ContainsKey("Sprites/UnFullBackpack_Large"))
+                if (EnabledItems["itm_bsodaplusmini"].Value && assetManager.ContainsKey("Sprites/BSODAPlusMiniIcon_Small") && assetManager.ContainsKey("Sprites/BSODAPlusMiniIcon_Large"))
+                {
+                    var small = assetManager.Get<Sprite>("Sprites/BSODAPlusMiniIcon_Small");
+                    var large = assetManager.Get<Sprite>("Sprites/BSODAPlusMiniIcon_Large");
+                    if (small != null && large != null)
+                    {
+                        var item = new ItemBuilder(Info).SetEnum("Itm_BSODAPlusMini").SetNameAndDescription("ExtraStuff_Itm_BSODAPlusMini", "ExtraStuff_Desc_BSODAPlusMini").SetSprites(small, large).SetGeneratorCost(10).SetShopPrice(425).SetItemComponent<BSODAPlus>().SetMeta(ItemFlags.Persists, new string[] { "drink", "food" }).Build();
+                        item.name = "ExtraStuff_Itm_BSODAPlusMini";
+                        ModItems.Add("itm_bsodaplusmini", item);
+                    }
+                }
+            }
+
+            ItemObject unfullBp = null;
+            ItemObject fullBp = null;
+
+            if (EnabledItems["itm_backpack_unfull"].Value && assetManager.ContainsKey("Sprites/UnFullBackpack_Small") && assetManager.ContainsKey("Sprites/UnFullBackpack_Large"))
             {
                 var ufs = assetManager.Get<Sprite>("Sprites/UnFullBackpack_Small");
                 var ufl = assetManager.Get<Sprite>("Sprites/UnFullBackpack_Large");
@@ -746,7 +837,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_backpack_unfull", unfullBp);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/FullBackpack_Small") && assetManager.ContainsKey("Sprites/FullBackpack_Large"))
+            if (EnabledItems["itm_backpack_full"].Value && assetManager.ContainsKey("Sprites/FullBackpack_Small") && assetManager.ContainsKey("Sprites/FullBackpack_Large"))
             {
                 var fs = assetManager.Get<Sprite>("Sprites/FullBackpack_Small");
                 var fl = assetManager.Get<Sprite>("Sprites/FullBackpack_Large");
@@ -757,7 +848,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_backpack_full", fullBp);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/NutellaIcon_Small") && assetManager.ContainsKey("Sprites/NutellaIcon_Large"))
+            if (EnabledItems["itm_nutella"].Value && assetManager.ContainsKey("Sprites/NutellaIcon_Small") && assetManager.ContainsKey("Sprites/NutellaIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/NutellaIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/NutellaIcon_Large");
@@ -768,7 +859,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_nutella", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/GumItemIcon_Small") && assetManager.ContainsKey("Sprites/GumItemIcon_Large"))
+            if (EnabledItems["itm_pinkgum"].Value && assetManager.ContainsKey("Sprites/GumItemIcon_Small") && assetManager.ContainsKey("Sprites/GumItemIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/GumItemIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/GumItemIcon_Large");
@@ -779,7 +870,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_pinkgum", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/OldCandyIcon_Small") && assetManager.ContainsKey("Sprites/OldCandyIcon_Large"))
+            if (EnabledItems["itm_oldcandy"].Value && assetManager.ContainsKey("Sprites/OldCandyIcon_Small") && assetManager.ContainsKey("Sprites/OldCandyIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/OldCandyIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/OldCandyIcon_Large");
@@ -790,7 +881,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_oldcandy", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/SpeedyElixirIcon_Small") && assetManager.ContainsKey("Sprites/SpeedyElixirIcon_Large"))
+            if (EnabledItems["itm_speedyelixir"].Value && assetManager.ContainsKey("Sprites/SpeedyElixirIcon_Small") && assetManager.ContainsKey("Sprites/SpeedyElixirIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/SpeedyElixirIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/SpeedyElixirIcon_Large");
@@ -801,7 +892,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_speedyelixir", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/TeacherNametagIcon_Small") && assetManager.ContainsKey("Sprites/TeacherNametagIcon_Large"))
+            if (EnabledItems["itm_teacher_nametag"].Value && assetManager.ContainsKey("Sprites/TeacherNametagIcon_Small") && assetManager.ContainsKey("Sprites/TeacherNametagIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/TeacherNametagIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/TeacherNametagIcon_Large");
@@ -812,7 +903,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_teacher_nametag", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/EventControllerIcon_Small") && assetManager.ContainsKey("Sprites/EventControllerIcon_Large"))
+            if (EnabledItems["itm_eventcontroller"].Value && assetManager.ContainsKey("Sprites/EventControllerIcon_Small") && assetManager.ContainsKey("Sprites/EventControllerIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/EventControllerIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/EventControllerIcon_Large");
@@ -823,7 +914,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_eventcontroller", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/BlastBsodaIcon_Small") && assetManager.ContainsKey("Sprites/BlastBsodaIcon_Large"))
+            if (EnabledItems["itm_blastbsoda"].Value && assetManager.ContainsKey("Sprites/BlastBsodaIcon_Small") && assetManager.ContainsKey("Sprites/BlastBsodaIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/BlastBsodaIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/BlastBsodaIcon_Large");
@@ -834,7 +925,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_blastbsoda", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/RandomizerItemIcon_Small") && assetManager.ContainsKey("Sprites/RandomizerItemIcon_Large"))
+            if (EnabledItems["itm_randomizer"].Value && assetManager.ContainsKey("Sprites/RandomizerItemIcon_Small") && assetManager.ContainsKey("Sprites/RandomizerItemIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/RandomizerItemIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/RandomizerItemIcon_Large");
@@ -845,7 +936,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_randomizer", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/BaldiWhistleIcon_Small") && assetManager.ContainsKey("Sprites/BaldiWhistleIcon_Large"))
+            if (EnabledItems["itm_baldiwhistle"].Value && assetManager.ContainsKey("Sprites/BaldiWhistleIcon_Small") && assetManager.ContainsKey("Sprites/BaldiWhistleIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/BaldiWhistleIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/BaldiWhistleIcon_Large");
@@ -856,7 +947,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_baldiwhistle", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/UsefulTeleporterIcon_Small") && assetManager.ContainsKey("Sprites/UsefulTeleporterIcon_Large"))
+            if (EnabledItems["itm_coolusefulteleporter"].Value && assetManager.ContainsKey("Sprites/UsefulTeleporterIcon_Small") && assetManager.ContainsKey("Sprites/UsefulTeleporterIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/UsefulTeleporterIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/UsefulTeleporterIcon_Large");
@@ -867,7 +958,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_coolusefulteleporter", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/SafetyShurikenIcon_Small") && assetManager.ContainsKey("Sprites/SafetyShurikenIcon_Large"))
+            if (EnabledItems["itm_safetyshuriken"].Value && assetManager.ContainsKey("Sprites/SafetyShurikenIcon_Small") && assetManager.ContainsKey("Sprites/SafetyShurikenIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/SafetyShurikenIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/SafetyShurikenIcon_Large");
@@ -878,7 +969,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_safetyshuriken", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/DarkCoffeeIcon_Small") && assetManager.ContainsKey("Sprites/DarkCoffeeIcon_Large"))
+            if (EnabledItems["itm_darkcoffee"].Value && assetManager.ContainsKey("Sprites/DarkCoffeeIcon_Small") && assetManager.ContainsKey("Sprites/DarkCoffeeIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/DarkCoffeeIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/DarkCoffeeIcon_Large");
@@ -889,7 +980,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_darkcoffee", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/PSpecialTeapotIcon_Small") && assetManager.ContainsKey("Sprites/PSpecialTeapotIcon_Large"))
+            if (EnabledItems["itm_specialteapot"].Value && assetManager.ContainsKey("Sprites/PSpecialTeapotIcon_Small") && assetManager.ContainsKey("Sprites/PSpecialTeapotIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/PSpecialTeapotIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/PSpecialTeapotIcon_Large");
@@ -900,7 +991,7 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_specialteapot", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/TastyBurgerIcon_Small") && assetManager.ContainsKey("Sprites/TastyBurgerIcon_Large"))
+            if (EnabledItems["itm_tastyburger"].Value && assetManager.ContainsKey("Sprites/TastyBurgerIcon_Small") && assetManager.ContainsKey("Sprites/TastyBurgerIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/TastyBurgerIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/TastyBurgerIcon_Large");
@@ -911,13 +1002,13 @@ namespace ExtraStuffRevived
                     ModItems.Add("itm_tastyburger", item);
                 }
             }
-            if (assetManager.ContainsKey("Sprites/KimimColaIcon_Small") && assetManager.ContainsKey("Sprites/KimimColaIcon_Large"))
+            if (EnabledItems["itm_kimcola"].Value && assetManager.ContainsKey("Sprites/KimimColaIcon_Small") && assetManager.ContainsKey("Sprites/KimimColaIcon_Large"))
             {
                 var small = assetManager.Get<Sprite>("Sprites/KimimColaIcon_Small");
                 var large = assetManager.Get<Sprite>("Sprites/KimimColaIcon_Large");
                 if (small != null && large != null)
                 {
-                    var item = new ItemBuilder(Info).SetEnum("Itm_KimCola").SetNameAndDescription("ExtraStuff_Itm_KimCola", "ExtraStuff_Desc_KimCola").SetSprites(small, large).SetGeneratorCost(0).SetShopPrice(9999).SetItemComponent<ITM_KimCola>().SetMeta(ItemFlags.Persists, new string[] { "drink", "food" }).Build();
+                    var item = new ItemBuilder(Info).SetEnum("Itm_KimCola").SetNameAndDescription("ExtraStuff_Itm_KimCola", "ExtraStuff_Desc_KimCola").SetSprites(small, large).SetGeneratorCost(999999999).SetShopPrice(9999).SetItemComponent<ITM_KimCola>().SetMeta(ItemFlags.Persists, new string[] { "drink", "food" }).Build();
                     item.name = "ExtraStuff_Itm_KimCola";
                     ModItems.Add("itm_kimcola", item);
                 }
@@ -948,7 +1039,7 @@ namespace ExtraStuffRevived
         {
             public static float DefaultVolume = 1f;
             public static bool IsMutedByLibrary = false;
-            private static AudioMixer? _echoMixer;
+            private static AudioMixer _echoMixer;
 
             public static void Mute()
             {
@@ -1005,7 +1096,7 @@ namespace ExtraStuffRevived
         [HarmonyPatch(typeof(LevelGenerator), "Generate")]
         internal static class ItemsSpawnPatch
         {
-            private static WeightedItemObject[]? _originalItems;
+            private static WeightedItemObject[] _originalItems;
 
             [HarmonyPrefix]
             static void Prefix(LevelGenerator __instance)
@@ -1060,7 +1151,9 @@ namespace ExtraStuffRevived
                     AddItem("itm_specialteapot", 25);
                     AddItem("itm_kimcola", 0);
                     AddItem("itm_tastyburger", 30);
-                    AddItem("itm_bsodaplus", 20); 
+                    AddItem("itm_bsodaplus", 20);
+                    AddItem("itm_blastbsodamini", 35);
+                    AddItem("itm_bsodaplusmini", 10);
 
                     __instance.ld.potentialItems = list.ToArray();
                 }
@@ -1093,7 +1186,7 @@ namespace ExtraStuffRevived
         {
             public const string ID = "blitzo.baldiplus.extrastuffrevived";
             public const string NAME = "Extra Stuff Revived";
-            public const string VERSION = "1.1.0.0";
+            public const string VERSION = "1.1.1.0";
         }
     }
 }
