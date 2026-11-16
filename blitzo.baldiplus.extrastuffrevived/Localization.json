@@ -137,15 +137,28 @@
     { "key": "ExtraStuff_Itm_BlastBsoda", "value": "Blast BSODA" },
     { "key": "ExtraStuff_Desc_BlastBsoda", "value": "Blast BSODA\nTo help keep students keep physical distantance, the drink of choice here is the Blast BSODA!\nMade with 90% more fizz and 200% more pressure, it still has the taste you love\nand might as well just blow the doors off the hinges too!" },
     { "key": "ExtraStuff_Ed_Tool_item_itm_blastbsoda_Title", "value": "Blast BSODA" },
-    { "key": "ExtraStuff_Ed_Tool_item_itm_blastbsoda_Desc", "value": "Pushes NPCs for 3 seconds, but faster" },
+    { "key": "ExtraStuff_Ed_Tool_item_itm_blastbsoda_Desc", "value": "Pushes NPCs for 3 seconds, but faster." },
+
+    { "key": "ExtraStuff_Itm_BlastBsodaMini", "value": "Blast BSODA Mini" },
+    { "key": "ExtraStuff_Desc_BlastBsodaMini", "value": "Blast BSODA Mini\nA sip-sized version of the Blast BSODA!\nIt packs a punch, but doesn't last as long as the real deal." },
+    { "key": "ExtraStuff_Ed_Tool_item_itm_blastbsodamini_Title", "value": "Blast BSODA Mini" },
+    { "key": "ExtraStuff_Ed_Tool_item_itm_blastbsodamini_Desc", "value": "A weaker and shorter version of the Blast BSODA." },
 
     { "key": "ExtraStuff_Itm_BSODAPlus", "value": "BSODA+" },
     { "key": "ExtraStuff_Desc_BSODAPlus", "value": "BSODA+\nOpen a can of fizzed up BSODA Plus and spray away anyone who's trying to get in your way!\n Now with THREE uses per can, so you can cause even more chaos!" },
-    { "key": "ExtraStuff_Itm_BSODAPlus (3)", "value": "BSODA+" },
-    { "key": "ExtraStuff_Itm_BSODAPlus (2)", "value": "BSODA+" },
-    { "key": "ExtraStuff_Itm_BSODAPlus (1)", "value": "BSODA+" },
+    { "key": "ExtraStuff_Itm_BSODAPlus (3)", "value": "BSODA+ (3/3)" },
+    { "key": "ExtraStuff_Itm_BSODAPlus (2)", "value": "BSODA+ (2/3)" },
+    { "key": "ExtraStuff_Itm_BSODAPlus (1)", "value": "BSODA+ (1/3)" },
     { "key": "ExtraStuff_Ed_Tool_item_itm_bsodaplus_Title", "value": "BSODA+" },
     { "key": "ExtraStuff_Ed_Tool_item_itm_bsodaplus_Desc", "value": "A upgraded version BSODA." },
+
+    { "key": "ExtraStuff_Itm_BSODAPlusMini", "value": "BSODA+ Mini" },
+    { "key": "ExtraStuff_Itm_BSODAPlusMini (3)", "value": "BSODA+ Mini (3/3)" },
+    { "key": "ExtraStuff_Itm_BSODAPlusMini (2)", "value": "BSODA+ Mini (2/3)" },
+    { "key": "ExtraStuff_Itm_BSODAPlusMini (1)", "value": "BSODA+ Mini (1/3)" },
+    { "key": "ExtraStuff_Desc_BSODAPlusMini", "value": "BSODA+ Mini\nAll the fizzy goodness of BSODA+ in a smaller can!\nYou still get three uses, but the spray won't last as long." },
+    { "key": "ExtraStuff_Ed_Tool_item_itm_bsodaplusmini_Title", "value": "BSODA+ Mini" },
+    { "key": "ExtraStuff_Ed_Tool_item_itm_bsodaplusmini_Desc", "value": "A smaller, weaker version of BSODA+." },
 
     { "key": "ExtraStuff_Itm_Randomizer", "value": "Randomizer" },
     { "key": "ExtraStuff_Desc_Randomizer", "value": "Randomizer\nA mysterious item, that is actually a different item." },
@@ -273,9 +286,9 @@
     { "key": "ExtraStuff_Glass_JuiceBreak", "value": "[Glass breaks]" },
 
     { "key": "StickerTitle_NotebookSticker", "value": "Notebook Sticker" },
-    { "key": "StickerDesc_NotebookSticker", "value": "Collecting notebooks will give you a random sticker!" },
+    { "key": "StickerDescription_NotebookSticker", "value": "Collecting notebooks will give you a random sticker!" },
 
     { "key": "StickerTitle_BsodaBonusSticker", "value": "BSODA Bonus" },
-    { "key": "StickerDesc_BsodaBonusSticker", "value": "Hitting NPCs with BSODA will give you 20 You Thought Points per sticker at the end of the level!" }
+    { "key": "StickerDescription_BsodaBonusSticker", "value": "Hitting NPCs with BSODA will give you 20 You Thought Points\n per sticker at the end of the level!" }
   ]
 }
